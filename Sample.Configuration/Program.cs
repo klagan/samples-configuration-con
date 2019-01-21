@@ -1,16 +1,47 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace Sample.Configuration
 {
+    public class Person
+    {
+        public Name Name { get; set; }
+
+        public int Age { get; set; }
+    }
+
+    public class Name
+    {
+        public string FirstName { get; set; }
+
+        public string LastName { get; set; }
+    }
+
+    public class TestAppConfigCast
+    {
+        public void Execute(IConfiguration config)
+        {
+            var person = new Person();
+
+
+            config.GetSection("Person").Bind(person);
+
+            var result = config.GetSection("Person").Get<Person>();
+
+        }
+
+    }
+
     class Program
     {
         private static IConfigurationRoot Configuration;
 
         static void Main(string[] args)
         {
+
             //https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host?view=aspnetcore-2.2
 
             var builder = new ConfigurationBuilder()
@@ -18,6 +49,8 @@ namespace Sample.Configuration
                 .AddJsonFile("appsettings.json");
 
             Configuration = builder.Build();
+
+            new TestAppConfigCast().Execute(Configuration);
 
             var option1 = Configuration["myOption1"];
 
@@ -27,7 +60,7 @@ namespace Sample.Configuration
                 .ConfigureHostConfiguration(config =>
                 {
                     config.AddEnvironmentVariables();
-
+                    
                     if (args != null)
                     {
                         // enviroment from command line
