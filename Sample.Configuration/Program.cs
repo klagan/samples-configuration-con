@@ -26,13 +26,10 @@ namespace Sample.Configuration
         {
             var person = new Person();
 
-
             config.GetSection("Person").Bind(person);
 
             var result = config.GetSection("Person").Get<Person>();
-
         }
-
     }
 
     class Program
@@ -41,7 +38,6 @@ namespace Sample.Configuration
 
         static void Main(string[] args)
         {
-
             //https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host?view=aspnetcore-2.2
 
             var builder = new ConfigurationBuilder()
