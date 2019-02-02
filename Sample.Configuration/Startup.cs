@@ -5,8 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Sample.Configuration.Models.Settings;
 
-namespace ConsoleApp1
+namespace Sample.Configuration
 {
     public class Startup
     {

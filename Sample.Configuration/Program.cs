@@ -1,56 +1,53 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Sample.Configuration.Models.Settings;
 
 namespace Sample.Configuration
 {
-    public class Person
-    {
-        public Name Name { get; set; }
-
-        public int Age { get; set; }
-    }
-
-    public class Name
-    {
-        public string FirstName { get; set; }
-
-        public string LastName { get; set; }
-    }
-
-    public class TestAppConfigCast
-    {
-        public void Execute(IConfiguration config)
-        {
-            var person = new Person();
-
-            config.GetSection("Person").Bind(person);
-
-            var result = config.GetSection("Person").Get<Person>();
-        }
-    }
-
     class Program
     {
         private static IConfigurationRoot Configuration;
 
         static void Main(string[] args)
         {
-            //https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host?view=aspnetcore-2.2
-
-            var builder = new ConfigurationBuilder()
+            var inMemory = new Dictionary<string, string>
+            {
+                {"site", "https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host?view=aspnetcore-2.2"},
+                {"output:folder", "reports"},
+            };
+            
+            //build the configuration up
+            Configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemory)
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json");
-
-            Configuration = builder.Build();
-
-            new TestAppConfigCast().Execute(Configuration);
-
-            var option1 = Configuration["myOption1"];
-
-            Console.WriteLine($"result: {option1}");
+                .AddJsonFile("appSettings.json")
+                //enable this line to get the settings from the .confgi file rather than .json file
+                //.AddXmlFile("app.config")
+                .AddCommandLine(Environment.GetCommandLineArgs().Skip(1).ToArray())
+                .AddEnvironmentVariables()
+                .Build();
+            
+            //this code block would set up an HTTP host - notice use of startup class
+            //var host = new WebHostBuilder()
+            //    .UseKestrel()
+            //    .UseContentRoot(Directory.GetCurrentDirectory())
+            //    .UseStartup<Startup>()
+            //    .ConfigureLogging((hostingContext, logging) =>
+            //    {
+            //        //logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+            //        logging.AddConsole();
+            //        logging.AddDebug();
+            //        logging.AddEventSourceLogger();
+            //    })
+            //    .Build();
 
             var hostBuilder = new HostBuilder()
                 .ConfigureHostConfiguration(config =>
@@ -64,38 +61,46 @@ namespace Sample.Configuration
                         config.AddCommandLine(args);
                     }
                 })
-                .ConfigureAppConfiguration((context, mybuilder) =>
-                {
-                    var env = context.HostingEnvironment;
-                    mybuilder.SetBasePath(AppContext.BaseDirectory)
-                        .AddJsonFile("appsettings.json", optional: false)
-                        .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
-                        // Override config by env, using like Logging:Level or Logging__Level
-                        .AddEnvironmentVariables();
-
-                })
                 .ConfigureServices((hostContext, services) =>
                 {
                     if (hostContext.HostingEnvironment.IsDevelopment())
                     {
-                        // Development service configuration
-                    }
-                    else
-                    {
-                        // Non-development service configuration
+                        // do seomthing special
                     }
 
-                    //services.AddHostedService<LifetimeEventsHostedService>();
-                    //services.AddHostedService<TimedHostedService>();
+                    // read settings from configuration
+                    services.Configure<MySettings>(options => Configuration.GetSection("MySettings").Bind(options));
+
+                    services.TryAdd(ServiceDescriptor.Singleton(typeof(ILoggerFactory), typeof(LoggerFactory)));
+
+                    services.TryAdd(ServiceDescriptor.Singleton(typeof(ILogger<>), typeof(Logger<>)));
                 })
-                .ConfigureLogging((hostContext, configLogging) =>
+                .ConfigureLogging((hostContext, loggingBuilder) =>
                 {
-                    //configLogging.AddConsole();
-                    //configLogging.AddDebug();
+                    //read logging configuration from configuration
+                    //loggingBuilder.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    loggingBuilder.AddConsole();
+                    loggingBuilder.AddDebug();
+                    loggingBuilder.AddEventSourceLogger();
                 });
 
             using (var host = hostBuilder.Build())
             {
+                var l = host.Services.GetService<ILogger<Program>>();
+
+                l.LogInformation("kam testing");
+                l.LogCritical("something critical");
+                l.LogDebug("something debug");
+                l.LogError("something error");
+                l.LogTrace("something trace");
+                l.LogWarning("something warning");
+
+                var option1 = Configuration["myOption1"];
+                l.LogInformation($"myOption1: {option1}");
+
+                var mySettings = host.Services.GetService<IOptions<MySettings>>().Value;
+                l.LogInformation($"Id: {mySettings.Id} => Name: {mySettings.SubSettings.Name}");
+
                 host.Run();
             }
         }
