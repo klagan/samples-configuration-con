@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Samples.Configuration": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ConfigurationBasics.GoodbyeMessage": "Goodbye from the environment variable!"
+      }
+    }
+  }
+}
